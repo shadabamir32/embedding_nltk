@@ -1,5 +1,5 @@
 from typing import Union, List
-from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks
+from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks, Form, Query
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from enums.embeddingmodels import EmbeddingModels;
@@ -8,6 +8,7 @@ from utils.json_handler import convert_jsonl_to_json
 import hashlib
 import os
 import shutil
+from fastapi.responses import JSONResponse
 
 app = FastAPI()
 app.add_middleware(
@@ -20,17 +21,30 @@ UPLOAD_DIR = "uploads"
 
 @app.post(path='/api/v1/upload', tags=['Upload File'])
 async def upload_data_File(file: UploadFile, background_task :BackgroundTasks):
-    file_hash = uploadFile(file=file)
-    background_task.add_task(preprocess_json, file_hash)
-
-    return {
-        'status': 'Success',
-        'message': 'File will be processed within few minutes.',
-        'data': {
-            'file_hash': file_hash
-        },
-        'code': 200
-    }
+    try:
+        file_hash = uploadFile(file=file)
+        if not os.path.exists(f"processed_files/{file_hash}/output.json"):
+            background_task.add_task(preprocess_json, file_hash)
+        return JSONResponse(
+            status_code=200,
+            content={
+            'status': 'Success',
+            'message': 'File uploaded successfully. Processing started.',
+            'data': {
+                'file_hash': file_hash
+            },
+            'code': 200
+        })
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={
+                'status': 'Error',
+                'message': f'An error occurred: {str(e)}',
+                'data': None,
+                'code': 500
+            }
+        )
 
 # Upload file in the upload directory.
 def uploadFile(file: UploadFile) -> str:
@@ -58,17 +72,52 @@ def get_file_hash(file_obj: File) -> str:
     return hasher.hexdigest()
 
 @app.post(path='/api/v1/train/{model}', tags=["Train Model"])
-async def train(model: EmbeddingModels, file_hash: str):
-    if not os.path.exists(f"{UPLOAD_DIR}/{file_hash}"):
-        raise HTTPException(status_code=404, detail="File not found")
-    train_model(file_hash, model)
-
-    return {"status": "Successs", "Message": "Model training has been completed."}
+async def train(model: EmbeddingModels, file_hash: str = Form(...)):
+    try:
+        if not os.path.exists(f"{UPLOAD_DIR}/{file_hash}"):
+            raise HTTPException(status_code=404, detail="File not found")
+        train_model(file_hash, model)
+        return JSONResponse(
+            status_code=200,
+            content={
+            'status': 'Success',
+            'message': 'Model training has been completed.',
+            'data': None,
+            'code': 200
+        })
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={
+                'status': 'Error',
+                'message': f'An error occurred: {str(e)}',
+                'data': None,
+                'code': 500
+            }
+        )
 
 @app.get(path='/api/v1/lookup/{model}', tags=["Train Model"])
 async def lookup(model: EmbeddingModels, file_hash: str, query: str):
-    data = cosin_lookup(query, file_hash, model)
-    return {"status": "Successs", "Data": data}
+    try:
+        data = cosin_lookup(query, file_hash, model)
+        return JSONResponse(
+            status_code=200,
+            content={
+            'status': 'Success',
+            'message': 'Look up found.',
+            'data': data,
+            'code': 200
+        })
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={
+                'status': 'Error',
+                'message': f'An error occurred: {str(e)}',
+                'data': None,
+                'code': 500
+            }
+        )
 
 # Will work on last
 # @app.get(path="/api/v1/generate/{model}", tags=["Generate"], description="Generate embedding using selected model.")
