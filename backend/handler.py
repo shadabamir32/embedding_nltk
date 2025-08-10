@@ -21,7 +21,7 @@ def get_model(model: EmbeddingModels):
     return instance
 
 def cosin_lookup(query: str, file_hash: str,model: EmbeddingModels):
-    return get_model(model).load_file(file_hash).load_joblib(file_hash).cosin_lookup(query)
+    return get_model(model).load_file(file_hash).load_joblib(file_hash).cosin_lookup(preprocess(query))
 
 
 async def preprocess_json(file_hash: str):
@@ -33,6 +33,7 @@ async def preprocess_json(file_hash: str):
     data_set['short_description'] = data_set['short_description'].parallel_apply(preprocess)
     print('\nSaving as output JSON')
     data_set.to_json(f'{CLEARN_DATA_DIR}/{file_hash}/output.json', orient="records", lines=True)
+    print('Preprocessing completed')
 
 # for record in records:
 #     record['link'] = record['link']

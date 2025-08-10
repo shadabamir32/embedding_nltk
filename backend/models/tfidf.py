@@ -4,6 +4,7 @@ from fastapi import HTTPException, BackgroundTasks
 import joblib
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
+import os
 
 class TF_IDF:
     chunksize = 100_000          # process 100k rows at a time
@@ -18,6 +19,8 @@ class TF_IDF:
         )
 
     def load_file(self, file_hash):
+        if not os.path.exists(f"processed_files/{file_hash}/output.json"):
+            raise HTTPException(status_code=404, detail="Processed file not found.")
         self.file_hash = file_hash
         data_set = pd.read_json(f"processed_files/{file_hash}/output.json", lines=True, nrows=self.sample_size_for_vocab)
         self.corpus = data_set['short_description']
@@ -25,6 +28,10 @@ class TF_IDF:
 
         return self
     def fit(self):
+        # try:
+        #     return self.load_joblib(self.file_hash)
+        # except Exception:
+        #     print('Training model')
         if self.corpus is None or self.corpus.empty:
             print('Corpus not found')
             raise HTTPException(status_code=404, detail="No corpus found.")
@@ -34,7 +41,11 @@ class TF_IDF:
         joblib.dump(self.model, f"processed_files/{self.file_hash}/tfidf_vectorizer.pkl")
         joblib.dump(self.tfidf_matrix, f"processed_files/{self.file_hash}/tfidf_matrix.pkl")
         print(f'Result saved at processed_files/{self.file_hash}')
+
+        return self
     def load_joblib(self, file_hash: str):
+        if not os.path.exists(f"processed_files/{file_hash}/tfidf_vectorizer.pkl") or not os.path.exists(f"processed_files/{file_hash}/tfidf_matrix.pkl"):
+            raise HTTPException(status_code=404, detail="Trained dataset files not found.")
         self.model = joblib.load(f"processed_files/{file_hash}/tfidf_vectorizer.pkl")
         self.tfidf_matrix = joblib.load(f"processed_files/{file_hash}/tfidf_matrix.pkl")
 
@@ -42,8 +53,8 @@ class TF_IDF:
 
     def cosin_lookup(self, query: str, top_n: int = 5):
         if self.tfidf_matrix is None:
-            print('Trained data not found')
-            raise HTTPException(status_code=404, detail="Trained data not found.")
+            print('Trained dataset not loaded.')
+            raise HTTPException(status_code=404, detail="Trained dataset not loaded.")
         query_vec = self.model.transform([query])
         similarities = cosine_similarity(query_vec, self.tfidf_matrix).flatten()
 

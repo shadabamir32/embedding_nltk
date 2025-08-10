@@ -10,7 +10,7 @@ import os
 import shutil
 from fastapi.responses import JSONResponse
 
-app = FastAPI()
+app = FastAPI(title="Document Embedding API", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -74,8 +74,6 @@ def get_file_hash(file_obj: File) -> str:
 @app.post(path='/api/v1/train/{model}', tags=["Train Model"])
 async def train(model: EmbeddingModels, file_hash: str = Form(...)):
     try:
-        if not os.path.exists(f"{UPLOAD_DIR}/{file_hash}"):
-            raise HTTPException(status_code=404, detail="File not found")
         train_model(file_hash, model)
         return JSONResponse(
             status_code=200,
@@ -118,8 +116,3 @@ async def lookup(model: EmbeddingModels, file_hash: str, query: str):
                 'code': 500
             }
         )
-
-# Will work on last
-# @app.get(path="/api/v1/generate/{model}", tags=["Generate"], description="Generate embedding using selected model.")
-# async def generate_embeddings(model: EmbeddingModels, text: str = None):
-#     return {'selectedModel': model.title(), 'payload': text}
