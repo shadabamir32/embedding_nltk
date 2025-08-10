@@ -10,38 +10,60 @@ FASTAPI_URL = "http://localhost:8000"
 # Init session state
 if "file_hash" not in st.session_state:
     st.session_state["file_hash"] = None
+if "column_name" not in st.session_state:
+    st.session_state["column_name"] = None
 # if "training_completed" not in st.session_state:
 #     st.session_state["training_completed"] = False
-# if "selected_model" not in st.session_state: 
+# if "selected_model" not in st.session_state:
 #     st.session_state["selected_model"] = None
 models = [model.value for model in EmbeddingModels]
+column_name = None
 
 # File upload
 st.subheader("Upload a dataset")
 uploaded_file = st.file_uploader("Choose a file", type=["json"])
-if uploaded_file is not None and st.session_state.file_hash is None:
+if uploaded_file is not None:
     files = {"file": (uploaded_file.name, uploaded_file, uploaded_file.type)}
-    response = requests.post(f"{FASTAPI_URL}/api/v1/upload", files=files)
-    if response.status_code == 200:
-        file_hash = response.json().get("data").get("file_hash")
-        st.session_state.file_hash = file_hash
-        st.toast("File uploaded successfully!", icon="✅")
+    # Read the uploaded file to get column names
+    if uploaded_file.type == "application/json":
+        df = pd.read_json(uploaded_file, lines=True)
+        uploaded_file.seek(0)  # Reset file pointer after reading
+        columns = df.columns.tolist()
+        column_name = st.selectbox("Select column for processing", columns)
+        if st.button("Upload File") and (
+            st.session_state.file_hash is None
+            or st.session_state.column_name != column_name
+        ):
+            response = requests.post(
+                f"{FASTAPI_URL}/api/v1/upload", files=files, data={'column_name': column_name})
+            if response.status_code == 200:
+                file_hash = response.json().get("data").get("file_hash")
+                st.session_state.file_hash = file_hash
+                st.session_state.column_name = column_name
+                st.toast("File uploaded successfully!", icon="✅")
+            else:
+                st.error(
+                    f"Failed to upload file. {response.json().get('message')} ")
     else:
-        st.error(f"Failed to upload file. {response.json().get('message')} ")
+        st.error("Unsupported file type. Please upload a JSON file.")
 # Display file hash
-st.info(f"File hash: {st.session_state.file_hash if st.session_state.file_hash else 'NA'}")
+st.info(
+    f"File hash: {st.session_state.file_hash if st.session_state.file_hash else 'NA'}")
 
 # Model training
-if st.session_state.file_hash is not None:
+if st.session_state.file_hash is not None and st.session_state.column_name == column_name:
     st.subheader("Train a Model")
     selected_model = st.selectbox("Select Model", models)
     # if st.session_state.selected_model != selected_model:
     #     st.session_state.selected_model = None
     #     st.session_state.training_completed = False
     if selected_model and st.button("Train Model"):
-        payload = {"file_hash": st.session_state.file_hash}
-        print(f"Training model: {selected_model} with file hash: {st.session_state.file_hash}")
-        response = requests.post(f"{FASTAPI_URL}/api/v1/train/{selected_model}", data=payload)
+        payload = {"file_hash": st.session_state.file_hash,
+                   "column_name": column_name}
+        print(
+            f"Training model: {selected_model} with file hash: {st.session_state.file_hash}  and column: {column_name}")
+        response = requests.post(
+            f"{FASTAPI_URL}/api/v1/train/{selected_model}", data=payload)
         if response.status_code == 200:
             # st.session_state.selected_model = selected_model
             # st.session_state.training_completed = True
@@ -50,17 +72,19 @@ if st.session_state.file_hash is not None:
             # st.session_state.selected_model = None
             # st.session_state.training_completed = False
             st.error(f"Failed to start training. {response.json()}")
-    #st.info(f"Selected trained Model: {st.session_state.selected_model}")
+    # st.info(f"Selected trained Model: {st.session_state.selected_model}")
 
 # Display selected model
 # if st.session_state.file_hash is not None and st.session_state.selected_model is not None and st.session_state.training_completed is True:
     st.subheader("Lookup Similar Words")
     query = st.text_input("Enter a word to search for similar words")
-    search_selected_model = st.selectbox("Select Model for Similarity Search", models)
+    search_selected_model = st.selectbox(
+        "Select Model for Similarity Search", models)
     if search_selected_model and st.button("Search") and query:
         params = {
             "file_hash": st.session_state.file_hash,
-            "query": query
+            "query": query,
+            "column_name": column_name
         }
         url = f"{FASTAPI_URL}/api/v1/lookup/{search_selected_model}"
         response = requests.get(url, params=params)
@@ -85,4 +109,5 @@ if st.session_state.file_hash is not None:
             else:
                 st.info("No similar words found.")
         else:
-            st.error(f"Lookup failed: {response.json().get('message', response.text)}")
+            st.error(
+                f"Lookup failed: {response.json().get('message', response.text)}")

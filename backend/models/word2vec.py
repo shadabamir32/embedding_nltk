@@ -32,7 +32,7 @@ class Word2VecModel:
         print(f"Model saved at processed_files/{self.file_hash}")
         return self
 
-    def load_file(self, file_hash: str):
+    def load_file(self, file_hash: str, column_name: str):
         path = f"processed_files/{file_hash}/output.json"
         if not os.path.exists(path):
             raise HTTPException(status_code=404, detail="Processed file not found.")
@@ -43,7 +43,9 @@ class Word2VecModel:
         df = pd.read_json(path, lines=True, nrows=self.sample_size_for_vocab)
         # Preprocess the text data
         print("Preprocessing text data...")
-        self.corpus = [simple_preprocess(str(text)) for text in df['short_description']]
+        if column_name not in df.columns:
+            raise HTTPException(status_code=404, detail=f"Column '{column_name}' not found in the dataset.")
+        self.corpus = [simple_preprocess(str(text)) for text in df[column_name]]
         print(f"Loaded corpus with {len(self.corpus)} records")
 
         return self

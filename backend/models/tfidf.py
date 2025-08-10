@@ -18,12 +18,15 @@ class TF_IDF:
             min_df=2
         )
 
-    def load_file(self, file_hash):
+    def load_file(self, file_hash: str, column_name: str):
         if not os.path.exists(f"processed_files/{file_hash}/output.json"):
             raise HTTPException(status_code=404, detail="Your file is still being processed, try again in a minute. If the problem persists, please try to upload file again.")
         self.file_hash = file_hash
         data_set = pd.read_json(f"processed_files/{file_hash}/output.json", lines=True, nrows=self.sample_size_for_vocab)
-        self.corpus = data_set['short_description']
+        if column_name not in data_set.columns:
+            raise HTTPException(status_code=404, detail=f"Column '{column_name}' not found in the dataset.")
+        self.corpus = data_set[column_name]
+        self.column_name = column_name
         print(f"Loaded corpus {self.corpus.__len__()} records")
 
         return self

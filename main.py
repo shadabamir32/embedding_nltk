@@ -23,11 +23,11 @@ app.add_middleware(
 UPLOAD_DIR = "uploads"
 
 @app.post(path='/api/v1/upload', tags=['Upload File'])
-async def upload_data_File(file: UploadFile, background_task :BackgroundTasks):
+async def upload_data_File(background_task :BackgroundTasks, file: UploadFile, column_name: str = Form(...)):
     try:
         file_hash = uploadFile(file=file)
-        if not os.path.exists(f"processed_files/{file_hash}/output.json"):
-            background_task.add_task(preprocess_json, file_hash)
+        # if not os.path.exists(f"processed_files/{file_hash}/output.json"):
+        background_task.add_task(preprocess_json, file_hash, column_name)
         return JSONResponse(
             status_code=200,
             content={
@@ -75,9 +75,9 @@ def get_file_hash(file_obj: File) -> str:
     return hasher.hexdigest()
 
 @app.post(path='/api/v1/train/{model}', tags=["Train Model"])
-async def train(model: EmbeddingModels, file_hash: str = Form(...)):
+async def train(model: EmbeddingModels, file_hash: str = Form(...), column_name: str = Form(...)):
     try:
-        train_model(file_hash, model)
+        train_model(file_hash, column_name, model)
         return JSONResponse(
             status_code=200,
             content={
@@ -98,9 +98,9 @@ async def train(model: EmbeddingModels, file_hash: str = Form(...)):
         )
 
 @app.get(path='/api/v1/lookup/{model}', tags=["Train Model"])
-async def lookup(model: EmbeddingModels, file_hash: str, query: str):
+async def lookup(model: EmbeddingModels, file_hash: str, query: str = Query(...), column_name: str = Query(...)):
     try:
-        data = cosin_lookup(query, file_hash, model)
+        data = cosin_lookup(query, file_hash, column_name, model)
         return JSONResponse(
             status_code=200,
             content={
