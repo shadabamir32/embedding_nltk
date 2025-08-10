@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from enums.embeddingmodels import EmbeddingModels;
 from backend.handler import train_model, preprocess_json, cosin_lookup
 from utils.json_handler import convert_jsonl_to_json
+import redis
 import hashlib
 import os
 import shutil
@@ -17,6 +18,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# r = redis.Redis(host='localhost', port=6379, decode_responses=True)
 UPLOAD_DIR = "uploads"
 
 @app.post(path='/api/v1/upload', tags=['Upload File'])
