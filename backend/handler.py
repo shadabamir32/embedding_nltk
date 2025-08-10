@@ -44,6 +44,20 @@ def cosin_lookup(query: str, file_hash: str, column_name: str, model: EmbeddingM
             file_hash).most_similar(preprocess(query))
     else:
         raise ValueError(f"Unsupported model type: {model}")
+def reduce_embeddings(file_hash: str, column_name: str, model: EmbeddingModels):
+    result = None
+    if model == EmbeddingModels.tfidf:
+        instance = TF_IDF()
+        print('Loading file for TF-IDF model')
+        result = instance.load_file(file_hash, column_name).load_joblib(file_hash).get_embeddings()
+    elif model == EmbeddingModels.word2vec_cbow:
+        instance = Word2VecModel(vector_size=1000, window=5, min_count=1, sg=0)
+        result = instance.load_file(file_hash, column_name).load_joblib(file_hash).get_embeddings()
+    elif model == EmbeddingModels.word2vec_skipgram:
+        instance = Word2VecModel(vector_size=1000, window=5, min_count=1, sg=1)
+        result = instance.load_file(file_hash, column_name).load_joblib(file_hash).get_embeddings()
+    else:
+        raise ValueError(f"Unsupported model type: {model}")
     return result
 
 

@@ -3,7 +3,7 @@ from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks, F
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from enums.embeddingmodels import EmbeddingModels;
-from backend.handler import train_model, preprocess_json, cosin_lookup
+from backend.handler import train_model, preprocess_json, cosin_lookup, reduce_embeddings
 from utils.json_handler import convert_jsonl_to_json
 import redis
 import hashlib
@@ -101,6 +101,29 @@ async def train(model: EmbeddingModels, file_hash: str = Form(...), column_name:
 async def lookup(model: EmbeddingModels, file_hash: str, query: str = Query(...), column_name: str = Query(...)):
     try:
         data = cosin_lookup(query, file_hash, column_name, model)
+        return JSONResponse(
+            status_code=200,
+            content={
+            'status': 'Success',
+            'message': 'Look up found.',
+            'data': data,
+            'code': 200
+        })
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={
+                'status': 'Error',
+                'message': f'An error occurred: {str(e)}',
+                'data': None,
+                'code': 500
+            }
+        )
+    
+@app.get(path='/api/v1/reduce/{model}', tags=["Train Model"])
+async def reduce(model: EmbeddingModels, file_hash: str, column_name: str = Query(...)):
+    try:
+        data = reduce_embeddings(file_hash, column_name, model)
         return JSONResponse(
             status_code=200,
             content={

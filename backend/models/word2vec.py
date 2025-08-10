@@ -74,6 +74,8 @@ class Word2VecModel:
             })
 
         return results
+    def get_embeddings(self):
+        print("Generating embeddings for all words in the vocabulary...")
     
     def cosin_lookup(self, query: str, top_n: int = 5):
         if not self.model:
