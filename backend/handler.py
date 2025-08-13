@@ -44,9 +44,10 @@ def cosin_lookup(query: str, file_hash: str, column_name: str, model: EmbeddingM
             file_hash).most_similar(preprocess(query))
     else:
         raise ValueError(f"Unsupported model type: {model}")
+    return result
 def reduce_embeddings(file_hash: str, column_name: str, model: EmbeddingModels):
     result = None
-    if model == EmbeddingModels.tfidf:
+    if 1 or model == EmbeddingModels.tfidf:
         instance = TF_IDF()
         print('Loading file for TF-IDF model')
         result = instance.load_file(file_hash, column_name).load_joblib(file_hash).get_embeddings()
