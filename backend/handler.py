@@ -4,6 +4,7 @@ from backend.models.tfidf import TF_IDF
 from backend.models.word2vec import Word2VecModel
 import pandas as pd
 import json
+from enums.reducemodal import ReduceModal;
 import os
 from pandarallel import pandarallel
 pandarallel.initialize(progress_bar=True)
@@ -45,18 +46,20 @@ def cosin_lookup(query: str, file_hash: str, column_name: str, model: EmbeddingM
     else:
         raise ValueError(f"Unsupported model type: {model}")
     return result
-def reduce_embeddings(file_hash: str, column_name: str, model: EmbeddingModels):
+def reduce_embeddings(file_hash: str, column_name: str, model: EmbeddingModels, reduce_modal: ReduceModal):
     result = None
     if 1 or model == EmbeddingModels.tfidf:
         instance = TF_IDF()
         print('Loading file for TF-IDF model')
-        result = instance.load_file(file_hash, column_name).load_joblib(file_hash).get_embeddings()
+        result = instance.load_file(file_hash, column_name).load_joblib(file_hash).get_embeddings(method=reduce_modal)
     elif model == EmbeddingModels.word2vec_cbow:
         instance = Word2VecModel(vector_size=1000, window=5, min_count=1, sg=0)
-        result = instance.load_file(file_hash, column_name).load_joblib(file_hash).get_embeddings()
+        print('Loading file for Word2Vec CBOW model')
+        result = instance.load_file(file_hash, column_name).load_joblib(file_hash).get_embeddings(method=reduce_modal)
     elif model == EmbeddingModels.word2vec_skipgram:
         instance = Word2VecModel(vector_size=1000, window=5, min_count=1, sg=1)
-        result = instance.load_file(file_hash, column_name).load_joblib(file_hash).get_embeddings()
+        print('Loading file for Word2Vec Skip-gram model')
+        result = instance.load_file(file_hash, column_name).load_joblib(file_hash).get_embeddings(method=reduce_modal)
     else:
         raise ValueError(f"Unsupported model type: {model}")
     return result

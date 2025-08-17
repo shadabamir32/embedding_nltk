@@ -3,6 +3,7 @@ from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks, F
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from enums.embeddingmodels import EmbeddingModels;
+from enums.reducemodal import ReduceModal;
 from backend.handler import train_model, preprocess_json, cosin_lookup, reduce_embeddings
 from utils.json_handler import convert_jsonl_to_json
 import redis
@@ -121,9 +122,9 @@ async def lookup(model: EmbeddingModels, file_hash: str, query: str = Query(...)
         )
     
 @app.get(path='/api/v1/reduce/{model}', tags=["Train Model"])
-async def reduce(model: EmbeddingModels, file_hash: str, column_name: str = Query(...)):
+async def reduce(model: EmbeddingModels, reduce_modal: ReduceModal, file_hash: str, column_name: str = Query(...)):
     try:
-        data = reduce_embeddings(file_hash, column_name, model)
+        data = reduce_embeddings(file_hash, column_name, model, reduce_modal)
         return JSONResponse(
             status_code=200,
             content={
