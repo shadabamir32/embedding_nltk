@@ -5,7 +5,7 @@ from enums.embeddingmodels import EmbeddingModels
 
 st.title("Embeddings")
 
-FASTAPI_URL = "http://localhost:8000"
+FASTAPI_URL = "http://107.22.97.139"
 
 # Init session state
 if "file_hash" not in st.session_state:
