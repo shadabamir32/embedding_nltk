@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 from gensim.models import Word2Vec
+from enums.reducemodal import ReduceModal;
 from gensim.utils import simple_preprocess
 import os
 
@@ -74,7 +75,7 @@ class Word2VecModel:
             })
 
         return results
-    def get_embeddings(self):
+    def get_embeddings(self, method: ReduceModal = ReduceModal.PCA):
         print("Generating embeddings for all words in the vocabulary...")
     
     def cosin_lookup(self, query: str, top_n: int = 5):

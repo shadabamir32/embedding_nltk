@@ -5,6 +5,7 @@ import joblib
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 import os
+from enums.reducemodal import ReduceModal;
 from sklearn.decomposition import TruncatedSVD
 from sklearn.manifold import TSNE
 
@@ -92,32 +93,23 @@ class TF_IDF:
 
         return results
 
-    def get_embeddings(self, method="pca", n_components=2, max_docs=2000):
+    def get_embeddings(self, method:ReduceModal = ReduceModal.PCA, n_components=2, max_docs=2000):
         if self.tfidf_matrix is None:
             print('Trained dataset not loaded.')
             raise HTTPException(
                 status_code=404, detail="Trained dataset not loaded.")
-        # print("Generating embeddings for all words in the vocabulary...")
-        # words = self.model.get_feature_names_out()
-        # print(f"Vocabulary size: {len(words)}")
-        # vectors = self.tfidf_matrix.toarray()
-        # print(f"Generated embeddings for {len(vectors)} documents")
 
-        # return {
-        #     "words": words.tolist(),
-        #     "vectors": vectors.tolist()
-        # }
         limit = min(max_docs, self.tfidf_matrix.shape[0])
         tfidf_subset = self.tfidf_matrix[:limit]
 
         # Step 1: Dimensionality reduction
-        if method.lower() == "pca":
+        if method == ReduceModal.PCA:
             reducer = TruncatedSVD(n_components=n_components, random_state=42)
             reduced = reducer.fit_transform(tfidf_subset)
-        elif method.lower() == "tsne":
+        elif method == ReduceModal.TSNE:
             svd = TruncatedSVD(n_components=50, random_state=42)
             reduced_svd = svd.fit_transform(tfidf_subset)
-            tsne = TSNE(n_components=n_components, random_state=42, perplexity=30, n_iter=1000)
+            tsne = TSNE(n_components=n_components, random_state=42, perplexity=30, max_iter=1000)
             reduced = tsne.fit_transform(reduced_svd)
         else:
             raise HTTPException(status_code=400, detail="Invalid method. Use 'pca' or 'tsne'.")
